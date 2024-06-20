@@ -2,6 +2,7 @@ import '@chatui/core/es/styles/index.less';
 import React, { useState,useRef, useEffect } from 'react';
 // 引入组件
 import Chat, { Bubble, useMessages} from '@chatui/core';
+import axios from "axios"
 import {get_history} from "../api"
 import {SSE} from "../sse"
 import {SettingOutlined} from  '@ant-design/icons'
@@ -18,6 +19,7 @@ export default   function ChatContainer({menuState
   ,setNowMenuKey,
    chatting,
   setChatting}){
+const messages_all=useRef([])
 const [all_node,setAllNode]=useState([])
 const { messages, appendMsg, setTyping,updateMsg,deleteMsg } = useMessages([]);
 const last_flag=useRef("-1")
@@ -138,22 +140,24 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
 )
 }else{
   console.log("sessionId:",key_sessionid[nowMenuKey])
-  all_node.forEach( (item)=>{
-    var source=new SSE(item.Url,
-        {headers:{
-            'Content-Type': 'application/json'
-        },
-         payload:JSON.stringify({
-           "session": [
-             {
-               "role": "user",
-               "content": val
-             }
-           ]
-         }),
-         method:'POST'
-      }
-      )
+  var source=new SSE("http://localhost:35883/v1/chat_ping",
+    {headers:{
+        'Content-Type': 'application/json'
+    },
+     payload:JSON.stringify({
+       "session": [
+         {
+           "role": "user",
+           "content": val
+         }
+       ]
+     }),
+     method:'POST'
+  }
+  )
+}
+
+
     source.addEventListener('message', function (event) {
       setChatting("1")
 
@@ -219,7 +223,7 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
     appendMsg({
       type: 'text',
       content: { text: '' },
-      _id:text_id.current
+      _id:text_id.current,
     });
 
     text_start_end.current=1
@@ -242,6 +246,49 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
         processing.current=0
         text_start_end.current=0
         setChatting("0")
+        if (all_node.length!=0){
+          messages_all.current.push({
+            "role":"user",
+            "content":val
+          })
+
+
+          all_node.forEach((item)=>{
+
+            axios({
+              url:item.Url,
+              headers:{
+                  'Content-Type': 'application/json'
+              } ,
+              data:{
+                "model": "gs-llm",
+                "messages":messages_all.current,
+                "max_tokens": 2048,
+                "temperature": 0
+              },
+              method:'post'
+            }).then((res)=>{
+              console.log("another:",res)
+              text_id.current++
+              appendMsg({
+                user:{
+                    "name": item.Name
+                },
+                type: 'text',
+                content: { text: res.data["choices"][0]["message"]['content'] },
+                _id:text_id.current
+            })
+            messages_all.current.push({
+              "role":"assistant",
+              "content":res.data["choices"][0]["message"]['content']
+            }
+            )
+            })
+
+
+
+          })
+        }
         return
       }else{
         text_sum=text_sum+JSON.parse(event.data)['content_stream']
@@ -251,17 +298,20 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
             type:'text',
             content:{
               text:text_sum
+            },
+            user:{
+              "name":"local"
             }
           }
         )
       },500)
     }
     }
+    
     )
-  })
+  }
 
   }
-}}
 
 
 function renderMessageContent(msg) {
