@@ -19,7 +19,7 @@ export default   function ChatContainer({menuState
   ,setNowMenuKey,
    chatting,
   setChatting}){
-const messages_all=useRef([])
+const messages_all=useRef({})
 const [all_node,setAllNode]=useState([])
 const { messages, appendMsg, setTyping,updateMsg,deleteMsg } = useMessages([]);
 const last_flag=useRef("-1")
@@ -93,6 +93,9 @@ const defaultQuickReplies = [
   },
   {
     name: '关于我们',
+  },
+  {
+    name: '多盒协作',
   }
 ];
 
@@ -247,13 +250,15 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
         text_start_end.current=0
         setChatting("0")
         if (all_node.length!=0){
-          messages_all.current.push({
-            "role":"user",
-            "content":val
-          })
-
-
           all_node.forEach((item)=>{
+            if(!messages_all.current.hasOwnProperty(item.Name)){
+              messages_all.current[item.Name]=[]
+            }
+            console.log("sssicppp")
+            messages_all.current[item.Name].push({
+              "role":"user",
+              "content":val
+            })
 
             axios({
               url:item.Url,
@@ -262,7 +267,7 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
               } ,
               data:{
                 "model": "gs-llm",
-                "messages":messages_all.current,
+                "messages":messages_all.current[item.Name],
                 "max_tokens": 2048,
                 "temperature": 0
               },
@@ -278,7 +283,7 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
                 content: { text: res.data["choices"][0]["message"]['content'] },
                 _id:text_id.current
             })
-            messages_all.current.push({
+            messages_all.current[item.Name].push({
               "role":"assistant",
               "content":res.data["choices"][0]["message"]['content']
             }
@@ -323,6 +328,81 @@ function quickReply(msg){
   let name=msg.name
   if (name == "节点设置"){
    node_setopen(true)
+  }
+  if(name=="多盒协作"){
+    text_id.current++
+    appendMsg({
+      type: 'text',
+      content: { text: "开始多盒协作  测试问题:讨论一下ai会不会是新的工业革命" },
+      position: 'right',
+      _id:text_id.current
+    });
+    var example="讨论一下ai会不会是新的工业革命,并且注意尽可能的回答简短"
+   var next=""
+    async function mutil_agent(){
+      var local_url="http://385366.proxy.nscc-gz.cn:8888/v1/chat/completions"
+     await axios({
+        url:local_url,
+        headers:{
+            'Content-Type': 'application/json'
+        } ,
+        data:{
+          "model": "gs-llm",
+        "messages":[{"role":"user","content":example}],
+          "max_tokens": 2048,
+          "temperature": 0
+        },
+        method:'post'
+      }).then((res)=>{
+        next=res.data["choices"][0]["message"]['content']
+        text_id.current++
+        appendMsg({
+          user:{
+              "name": 'local'
+          },
+          type: 'text',
+          content: { text: next },
+          _id:text_id.current
+
+        })
+      })
+      all_node.forEach(async (item)=>{
+        await axios({
+          url:item.Url,
+          headers:{
+              'Content-Type': 'application/json'
+          } ,
+          data:{
+            "model": "gs-llm",
+            "messages":[{"role":'user',"content":`这是你要讨论的问题:${example} 这是上一个人讨论的结果 ${next}  请接着继续讨论`}],
+            "max_tokens": 2048,
+            "temperature": 0
+          },
+          method:'post'
+        }).then((res)=>{
+          next=res.data["choices"][0]["message"]['content']
+          text_id.current++
+          appendMsg(
+            {
+              user:{
+                  "name": item.Name
+              },
+              type: 'text',
+              content: { text: next },
+              _id:text_id.current
+
+            }
+
+
+          )
+        })
+      })
+
+    }
+    mutil_agent()
+
+    
+
   }
 
 }

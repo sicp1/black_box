@@ -130,12 +130,17 @@ function NodeHtmlAllocate({key_,items,itemsConfig,setItems,setKey,all_node}){
   useEffect(()=>{
     console.log("all_node:",all_node.length)
     if(key_!=-1 && all_node.length!=0){
+      if(all_node[key_-1]==undefined){
+        setNodeName("")
+        setNodeUrl("")
+        return 
+      }
       console.log("ssssss")
       setNodeName(all_node[key_-1].Name)
       setNodeUrl(all_node[key_-1].Url)
     }
 
-  })
+  },[key_])
   const flag=useRef(true)
   console.log(key_)
   if (key_===-1){
@@ -235,8 +240,7 @@ var tmp
       console.log("temppppppp:",tmp)
     }
     getall()
-  },[setItems,setAllNode])
-  
+  },[open])
 
   console.log("tmp_key:",tmpkey)
    return (
