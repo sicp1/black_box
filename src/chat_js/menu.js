@@ -1,10 +1,12 @@
 import React from 'react';
 import {SettingOutlined} from "@ant-design/icons"
 import {Menu} from "antd"
+import { useState } from 'react';
 
-export default function MenuChat({menuState,setMenu,nowSessionId,setNowSessionId,nowMenuKey,setNowMenuKey,key_sessionid,setKey_sessionid,chatting}){
+
+export default function MenuChat({menuState,setMenu,nowSessionId,setNowSessionId,nowMenuKey,key_sessionid,setKey_sessionid,chatting,NowMenuKey,setNowMenuKey}){
     return <Menu
-    selectedKeys={[nowMenuKey]}
+    selectedKeys={[NowMenuKey]}
     style={{
       width: '10%',
     }}
@@ -25,14 +27,16 @@ export default function MenuChat({menuState,setMenu,nowSessionId,setNowSessionId
               label:"对话"+menuState.length,
             }
           ])
-          setNowMenuKey((menuState.length+1).toString())
+          nowMenuKey.current=(menuState.length+1).toString()
+          setNowMenuKey(nowMenuKey.current)
           var tmp=key_sessionid
           tmp[(menuState.length+1).toString()]=(menuState.length).toString()
           setKey_sessionid(tmp)
 
         }else{
           console.log("nowMenuKey:",res.key)
-          setNowMenuKey(res.key)
+          nowMenuKey.current=res.key
+          setNowMenuKey(nowMenuKey.current)
         }
         
 

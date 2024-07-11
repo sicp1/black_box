@@ -1,7 +1,7 @@
 import ChatContainer from "./chat_js/chat_container";
 import MenuChat from "./chat_js/menu";
 import "./chat_css/chat.css" 
-import {useState} from "react"
+import {useState,useRef} from "react"
 import {SettingOutlined} from  '@ant-design/icons'
 import { set } from "rsuite/esm/internals/utils/date";
 export default function Chat() {
@@ -17,7 +17,9 @@ export default function Chat() {
       label:'新建对话',
     },
   ])
-  const [nowMenuKey,setNowMenuKey]=useState("-1")
+  const nowMenuKey=useRef("-1")
+
+  const [NowMenuKey,setNowMenuKey]=useState(-1)
 
   const [chatting,setChatting]=useState("0")
 
@@ -28,10 +30,11 @@ export default function Chat() {
          nowSessionId={nowSessionId}
            setNowSessionId={setNowSessionId}
              nowMenuKey={nowMenuKey}
-              setNowMenuKey={setNowMenuKey}
                 key_sessionid={key_sessionid}
                    setKey_sessionid={setKey_sessionid}
                    chatting={chatting}
+                   NowMenuKey={NowMenuKey}
+                   setNowMenuKey={setNowMenuKey}
                    />
     <div style={{width:'90%'}}>
     <ChatContainer className="chat_container"
@@ -43,11 +46,11 @@ export default function Chat() {
          setNowSessionId={setNowSessionId} 
           sessionid_history={sessionid_history}
             setSessionid_history={setSessionid_history}
-            nowMenuKey={nowMenuKey}  
-            setNowMenuKey={setNowMenuKey}  
+            nowMenuKey={nowMenuKey}   
             chatting={chatting}
             setChatting={setChatting}
-            
+            NowMenuKey={NowMenuKey}
+            setNowMenuKey={setNowMenuKey}
             />
     </div>
 </div>

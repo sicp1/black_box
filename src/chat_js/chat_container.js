@@ -3,34 +3,72 @@ import React, { useState,useRef, useEffect } from 'react';
 // 引入组件
 import Chat, { Bubble, useMessages} from '@chatui/core';
 import axios from "axios"
-import {get_history} from "../api"
+import {get_history,node_infer} from "../api"
 import {SSE} from "../sse"
 import {SettingOutlined} from  '@ant-design/icons'
 // 引入样式
 import '@chatui/core/dist/index.css';
 import NodeConfig from './node_config';
+import CharacterConfig from './character_config';
+import { NodeCharacter } from './node_character';
+import {baseURL,set_history} from "../api"
+import { Empty } from 'antd';
 export default   function ChatContainer({menuState
   ,setMenu
   ,sessionid_history
   ,setSessionid_history
   ,key_sessionid
   ,setKey_sessionid
-  ,nowMenuKey
-  ,setNowMenuKey,
+  ,nowMenuKey,
    chatting,
-  setChatting}){
+  setChatting,
+NowMenuKey,
+setNowMenuKey}){
 const messages_all=useRef({})
 const [all_node,setAllNode]=useState([])
+const [all_character,setAllCharacter]=useState([])
 const { messages, appendMsg, setTyping,updateMsg,deleteMsg } = useMessages([]);
+
+const menukey_history=useRef({})
+const menukey_historyid=useRef({})
+const sessionid_array=useRef({
+  "local":0
+})
+
+
 const last_flag=useRef("-1")
 const [node_open,node_setopen]=useState(false)
+const [character_open,character_setopen]=useState(false)
+const [node_character_open,node_character_setopen]=useState(false)
+
+const character_node=useRef({})
+
 console.log(node_open)
 const text_id=useRef(0)
 const text_start_end=useRef(0)
 const processing=useRef(0)
 useEffect(()=>{
+  console.log(1111)
   async function init(){
-if (isNaN(key_sessionid[nowMenuKey])==true){
+
+
+
+
+    console.log("set:",menukey_history.current)
+await  set_history(JSON.stringify(
+  {
+    "saved_json":JSON.stringify(menukey_history.current),
+    "sessionid_set":JSON.stringify(sessionid_array.current)
+  }
+)).then(
+  (res)=>{
+    menukey_historyid.current[nowMenuKey.current]=res.data.data.id
+    console.log("menukey_historyid:",menukey_historyid)
+  }
+)
+
+if (isNaN(key_sessionid[nowMenuKey.current])==true){
+
 
   console.log("last_flag")
   console.log("messages:",messages)
@@ -39,33 +77,62 @@ if (isNaN(key_sessionid[nowMenuKey])==true){
     deleteMsg(i)
   }
   text_id.current=0
-   await get_history({"session_id":key_sessionid[nowMenuKey]}).then((res)=>{
-    var content
-    content=JSON.parse(res.data.data.Content)['session']
-    console.log("content___:",content)
-    content.forEach(element => {
+  console.log("history_id:",JSON.stringify({"history_id":menukey_historyid.current[nowMenuKey.current]}),"   key:",nowMenuKey.current)
+   await get_history({"history_id":menukey_historyid.current[nowMenuKey.current]}).then((res)=>{
+    console.log(res)
+    if (res.data.data.history==""){
+      return
+    }
+    var content=JSON.parse(res.data.data.history)[nowMenuKey.current]
+    console.log(res)
+    content.forEach(element=>{
       text_id.current+=1
-     if (element.role=="user"){
-      appendMsg({
-        type: 'text',
-        content: { text: element.content },
-        position: 'right',
-        _id:text_id.current
-      });
-     }else{
-      appendMsg({
-        type: 'text',
-        content: { text: element.content },
-        position: 'left',
-        _id:text_id.current
-      });
-     }
-
-
-    });
+      if (element.role=="user"){
+        appendMsg({
+          type: 'text',
+          content: { text: element.content },
+          position: 'right',
+          _id:text_id.current
+        });
+       }else{
+        appendMsg({
+            type: 'text',
+            content: { text: element.content },
+            position: 'left',
+            _id:text_id.current
+          });
+       }
+    })
     var tmp=sessionid_history
-    tmp[key_sessionid[nowMenuKey]]=content
+    tmp[key_sessionid[nowMenuKey.current]]=content
     setSessionid_history(tmp)
+    // var content
+    // console.log("get_history:",res)
+    // content=JSON.parse(res.data.data.Content)['session']
+    // console.log("content___:",content)
+    // content.forEach(element => {
+    //   text_id.current+=1
+    //  if (element.role=="user"){
+    //   appendMsg({
+    //     type: 'text',
+    //     content: { text: element.content },
+    //     position: 'right',
+    //     _id:text_id.current
+    //   });
+    //  }else{
+    //   appendMsg({
+    //     type: 'text',
+    //     content: { text: element.content },
+    //     position: 'left',
+    //     _id:text_id.current
+    //   });
+    //  }
+
+
+    // });
+    // var tmp=sessionid_history
+    // tmp[key_sessionid[nowMenuKey.current]]=content
+    // setSessionid_history(tmp)
   })
 
 
@@ -82,7 +149,7 @@ if (isNaN(key_sessionid[nowMenuKey])==true){
   }
   init()
   }
-,[nowMenuKey])
+,[NowMenuKey])
 
 const defaultQuickReplies = [
   {
@@ -96,7 +163,11 @@ const defaultQuickReplies = [
   },
   {
     name: '多盒协作',
+  },
+  {
+    name:"节点人设配置"
   }
+  
 ];
 
 
@@ -121,29 +192,37 @@ function handleSend(type, val) {
     });
 
     setTyping(true);
-if (isNaN(key_sessionid[nowMenuKey])==true){
+
+if (isNaN(key_sessionid[nowMenuKey.current])==true){
+
   var tmp=sessionid_history
-  tmp[key_sessionid[nowMenuKey]].push({
+  tmp[key_sessionid[nowMenuKey.current]].push({
     "role": "user",
     "content": val
   })
   setSessionid_history(tmp)
-  console.log("sessionId:",key_sessionid[nowMenuKey])
-var source=new SSE("http://localhost:35883/v1/chat_ping",
+  console.log("sessionId:",key_sessionid[nowMenuKey.current])
+var source=new SSE(`${baseURL}/v1/chat_ping`,
   {headers:{
       'Content-Type': 'application/json'
   },
    payload:JSON.stringify({
-    "session": sessionid_history[key_sessionid[nowMenuKey]],
-    "id":key_sessionid[nowMenuKey]
+    "session":[
+      {
+        "role":"user",
+        "content":val
+      }
+    ] ,
+    "id":key_sessionid[nowMenuKey.current]
    }
    ),
    method:'POST'
 }
 )
 }else{
-  console.log("sessionId:",key_sessionid[nowMenuKey])
-  var source=new SSE("http://localhost:35883/v1/chat_ping",
+  console.log("test_nowMenuKey:",nowMenuKey.current)
+  console.log("sessionId:",key_sessionid[nowMenuKey.current])
+  var source=new SSE(`${baseURL}/v1/chat_ping`,
     {headers:{
         'Content-Type': 'application/json'
     },
@@ -164,11 +243,14 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
     source.addEventListener('message', function (event) {
       setChatting("1")
 
-    if (isNaN(key_sessionid[nowMenuKey])==false && key_sessionid[nowMenuKey] !="-1"){
+    if (isNaN(key_sessionid[nowMenuKey.current])==false && key_sessionid[nowMenuKey.current] !="-1"){
+      menukey_history.current[nowMenuKey.current]=[
+       ]
+       menukey_historyid.current[nowMenuKey.current]=-1
 
       console.log("start create session history")
       var tmpMenuState=menuState.map((item)=>{
-         if (item['key']==nowMenuKey){
+         if (item['key']==nowMenuKey.current){
           return {
             key:item['key'],
             icon:<SettingOutlined />,
@@ -180,7 +262,8 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
 
     setMenu(tmpMenuState)
     var tmp_key_sessionid=key_sessionid
-    tmp_key_sessionid[nowMenuKey]=JSON.parse(event.data)['id']
+    tmp_key_sessionid[nowMenuKey.current]=JSON.parse(event.data)['id']
+    sessionid_array.current['local']=JSON.parse(event.data)['id']
     setKey_sessionid(tmp_key_sessionid)
     var tmp=sessionid_history
     tmp[JSON.parse(event.data)['id']]=[
@@ -192,7 +275,7 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
     setSessionid_history(tmp)
 
 
-    }else if (key_sessionid[nowMenuKey]=="-1"){
+    }else if (key_sessionid[nowMenuKey.current]=="-1"){
       setMenu([
         ...menuState,
       {
@@ -201,7 +284,10 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
         label:val,
       }
       ])
-      setNowMenuKey((menuState.length+1).toString())
+      nowMenuKey.current=(menuState.length+1).toString()
+      menukey_history.current[nowMenuKey.current]=[
+       ]
+       menukey_historyid.current[nowMenuKey.current]=-1
       console.log("-1-1-1-1:",JSON.parse(event.data)['id'])
 
       var tmp=sessionid_history
@@ -242,6 +328,24 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
             "content":text_sum
           }
         )
+        console.log("test_current:",menukey_historyid.current[nowMenuKey.current])
+        menukey_history.current[nowMenuKey.current].push(
+        {
+          "role": "user",
+          "content": val
+        }
+              )
+        menukey_history.current[nowMenuKey.current].push(
+          {
+            "role":"assistant",
+            "content":text_sum
+          }
+        )
+      //  if (menukey_historyid.current[nowMenuKey.current]==-1){
+       
+      //   console.log("test_menukey_history: ",menukey_history.current)
+
+      //  }
 
         setSessionid_history(tmp)
 
@@ -249,46 +353,114 @@ var source=new SSE("http://localhost:35883/v1/chat_ping",
         processing.current=0
         text_start_end.current=0
         setChatting("0")
+
         if (all_node.length!=0){
           all_node.forEach((item)=>{
-            if(!messages_all.current.hasOwnProperty(item.Name)){
-              messages_all.current[item.Name]=[]
-            }
-            console.log("sssicppp")
-            messages_all.current[item.Name].push({
-              "role":"user",
-              "content":val
-            })
-
-            axios({
-              url:item.Url,
-              headers:{
-                  'Content-Type': 'application/json'
-              } ,
-              data:{
-                "model": "gs-llm",
-                "messages":messages_all.current[item.Name],
-                "max_tokens": 2048,
-                "temperature": 0
-              },
-              method:'post'
-            }).then((res)=>{
-              console.log("another:",res)
+            if(!(item.Name in sessionid_array.current)){  
+            node_infer(JSON.stringify(
+              {
+                "session":[
+                  {
+                    "role":"user",
+                    "content":val
+                  }
+                ],
+                "node_id":item.Id,
+                "stream":false
+              }
+            )).then((res)=>{
+              console.log(res)
+              sessionid_array.current[item.Name]= res.data.data.id
               text_id.current++
-              appendMsg({
-                user:{
-                    "name": item.Name
-                },
-                type: 'text',
-                content: { text: res.data["choices"][0]["message"]['content'] },
-                _id:text_id.current
+              appendMsg(
+                {
+                  user:{
+                    "name":item.Name
+                  },
+                  type:"text",
+                  content:{"text":res.data.data.content},
+                  _id:text_id.current
+                }
+              )
+              menukey_history.current[nowMenuKey.current].push({"content":res.data.data.content,
+                "role":"assistant"
+              })
             })
-            messages_all.current[item.Name].push({
-              "role":"assistant",
-              "content":res.data["choices"][0]["message"]['content']
-            }
-            )
-            })
+          }else{
+            node_infer(JSON.stringify({
+            "session":[
+             {
+               "role":"user",
+               "content":val
+             }
+            ],
+            "node_id":item.Id,
+            "stream":false,
+            "id":sessionid_array.current[item.Name]
+             }
+             )).then((res)=>{
+               text_id.current++
+               appendMsg(
+                 {
+                   user:{
+                     "name":item.Name
+                   },
+                   type:"text",
+                   content:{"text":res.data.data.content},
+                   _id:text_id.current
+                 }
+               )
+               menukey_history.current[nowMenuKey.current].push({"content":res.data.data.content,
+                 "role":"assistant"
+               })
+
+             })
+          }
+
+
+            
+
+
+
+
+
+            // if(!messages_all.current.hasOwnProperty(item.Name)){
+            //   messages_all.current[item.Name]=[]
+            // }
+            // messages_all.current[item.Name].push({
+            //   "role":"user",
+            //   "content":val
+            // })
+
+            // axios({
+            //   url:item.Url,
+            //   headers:{
+            //       'Content-Type': 'application/json'
+            //   } ,
+            //   data:{
+            //     "model": "gs-llm",
+            //     "messages":messages_all.current[item.Name],
+            //     "max_tokens": 2048,
+            //     "temperature": 0
+            //   },
+            //   method:'post'
+            // }).then((res)=>{
+            //   console.log("another:",res)
+            //   text_id.current++
+            //   appendMsg({
+            //     user:{
+            //         "name": item.Name
+            //     },
+            //     type: 'text',
+            //     content: { text: res.data["choices"][0]["message"]['content'] },
+            //     _id:text_id.current
+            // })
+            // messages_all.current[item.Name].push({
+            //   "role":"assistant",
+            //   "content":res.data["choices"][0]["message"]['content']
+            // }
+            // )
+            // })
 
 
 
@@ -329,6 +501,13 @@ function quickReply(msg){
   if (name == "节点设置"){
    node_setopen(true)
   }
+  if(name=="人设设置"){
+    character_setopen(true)
+  }
+  if(name=="节点人设配置"){
+    node_character_setopen(true)
+
+  }
   if(name=="多盒协作"){
     text_id.current++
     appendMsg({
@@ -337,50 +516,78 @@ function quickReply(msg){
       position: 'right',
       _id:text_id.current
     });
-    var example="讨论一下ai会不会是新的工业革命,并且注意尽可能的回答简短"
-   var next=""
+    var example="讨论一下ai是不是新的工业革命,并且注意尽可能的回答简短"
     async function mutil_agent(){
-      var local_url="http://385366.proxy.nscc-gz.cn:8888/v1/chat/completions"
-     await axios({
-        url:local_url,
-        headers:{
-            'Content-Type': 'application/json'
-        } ,
-        data:{
-          "model": "gs-llm",
-        "messages":[{"role":"user","content":example}],
-          "max_tokens": 2048,
-          "temperature": 0
-        },
-        method:'post'
-      }).then((res)=>{
-        next=res.data["choices"][0]["message"]['content']
-        text_id.current++
-        appendMsg({
+      var next=""
+    //   var local_url="http://385366.proxy.nscc-gz.cn:8888/v1/chat/completions"
+    //  await axios({
+    //     url:local_url,
+    //     headers:{
+    //         'Content-Type': 'application/json'
+    //     } ,
+    //     data:{
+    //       "model": "gs-llm",
+    //     "messages":[{"role":"user","content":example}],
+    //       "max_tokens": 2048,
+    //       "temperature": 0
+    //     },
+    //     method:'post'
+    //   }).then((res)=>{
+    //     next=res.data["choices"][0]["message"]['content']
+    //     text_id.current++
+    //     appendMsg({
+    //       user:{
+    //           "name": 'local'
+    //       },
+    //       type: 'text',
+    //       content: { text: next },
+    //       _id:text_id.current
+
+    //     })
+    //   })
+   await  node_infer(JSON.stringify(
+      {
+        "session":[
+          {
+            "role":"user",
+            "content":`你是一个支持者，你认为ai是新的工业革命，这是你要讨论的问题:${example} 你要给出支持的理由`
+          }
+        ],
+        "stream":false
+      }
+    )).then((res)=>{
+      next=res.data.data.content
+      text_id.current++
+      appendMsg(
+        {
           user:{
-              "name": 'local'
+              "name": "local"
           },
           type: 'text',
           content: { text: next },
           _id:text_id.current
 
-        })
-      })
+        }
+
+
+      )
+    })
       all_node.forEach(async (item)=>{
-        await axios({
-          url:item.Url,
-          headers:{
-              'Content-Type': 'application/json'
-          } ,
-          data:{
-            "model": "gs-llm",
-            "messages":[{"role":'user',"content":`这是你要讨论的问题:${example} 这是上一个人讨论的结果 ${next}  请接着继续讨论`}],
-            "max_tokens": 2048,
-            "temperature": 0
-          },
-          method:'post'
-        }).then((res)=>{
-          next=res.data["choices"][0]["message"]['content']
+        console.log(item.Url)
+        node_infer(JSON.stringify(
+          {
+            "session":[
+              {
+                "role":"user",
+                "content":`你是一个反对者，你认为ai不是新的工业革命，这是你要讨论的问题:${example} 这是上一个人讨论的结果 ${next}  请接着继续讨论`
+              }
+            ],
+            "node_id":item.Id,
+            "stream":false
+          }
+        )).then((res)=>{
+          console.log(res)
+          next=res.data.data.content
           text_id.current++
           appendMsg(
             {
@@ -396,6 +603,7 @@ function quickReply(msg){
 
           )
         })
+      
       })
 
     }
@@ -422,7 +630,10 @@ return (
       console.log("blur:",event)
     }}
   />
+  
   <NodeConfig open={node_open} setOpen={node_setopen} all_node={all_node} setAllNode={setAllNode}  ></NodeConfig>
+  <CharacterConfig open={character_open}  setOpen={character_setopen} all_character={all_character} setAllCharacter={setAllCharacter}></CharacterConfig>
+  <NodeCharacter open={node_character_open}  setOpen={node_character_setopen} all_node={all_node} all_character={all_character} character_node={character_node} ></NodeCharacter>
   </>
 );
   }

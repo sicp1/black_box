@@ -14,7 +14,7 @@ import {
 } from 'antd'
 
 
-function NodeForm({node_name,setNodeName,key_,setItems,items,node_url,setNodeUrl}){
+function NodeForm({node_name,setNodeName,key_,setItems,items,node_url,setNodeUrl,node_serverport,setNodeServerPort,node_inferport,setNodeInferPort}){
     const formItemLayout = {
       labelCol: {
         xs: {
@@ -82,7 +82,42 @@ function NodeForm({node_name,setNodeName,key_,setItems,items,node_url,setNodeUrl
             }
             />
           </Form.Item>
-        
+         <Form.Item
+           label="节点infer_port"
+
+           rules={[
+             {
+               required: true,
+               message: 'Please input!',
+             },
+           ]}
+         >
+           <Input
+           value={node_inferport}
+           onChange={
+             (event)=>{
+               setNodeInferPort(event.target.value)
+             }
+           }/>
+         </Form.Item>
+         <Form.Item
+           label="节点server_port"
+
+           rules={[
+             {
+               required: true,
+               message: 'Please input!',
+             },
+           ]}
+         >
+           <Input
+           value={node_serverport}
+           onChange={
+             (event)=>{
+               setNodeServerPort(event.target.value)
+             }
+           }/>
+         </Form.Item>
           <Form.Item
             wrapperCol={{
               offset: 6,
@@ -93,7 +128,9 @@ function NodeForm({node_name,setNodeName,key_,setItems,items,node_url,setNodeUrl
             onClick={()=>{
               node_create({
                 "name":node_name,
-                "url":node_url
+                "url":node_url,
+                "server_port":parseInt(node_serverport),
+                "infer_port":parseInt(node_inferport)
               }).then(()=>{
                 var tmp=items.map(
                   (item)=>{
@@ -127,17 +164,26 @@ function NodeNone(){
 function NodeHtmlAllocate({key_,items,itemsConfig,setItems,setKey,all_node}){
   const [node_name,setNodeName]=useState("")
   const [node_url,setNodeUrl]=useState("")
+  const [node_serverport,setNodeServerPort]=useState("")
+  const [node_inferport,setNodeInferPort]=useState("")
   useEffect(()=>{
     console.log("all_node:",all_node.length)
     if(key_!=-1 && all_node.length!=0){
       if(all_node[key_-1]==undefined){
         setNodeName("")
         setNodeUrl("")
+        setNodeInferPort("")
+        setNodeServerPort("")
         return 
       }
+      console.log(all_node)
       console.log("ssssss")
       setNodeName(all_node[key_-1].Name)
       setNodeUrl(all_node[key_-1].Url)
+      setNodeInferPort(all_node[key_-1].InferPort)
+      setNodeServerPort(all_node[key_-1].ServerPort)
+      
+      
     }
 
   },[key_])
@@ -180,6 +226,10 @@ node_name={node_name}
 setNodeName={setNodeName}
 node_url={node_url}
 setNodeUrl={setNodeUrl}
+node_serverport={node_serverport}
+setNodeServerPort={setNodeServerPort}
+node_inferport={node_inferport}
+setNodeInferPort={setNodeInferPort}
 >
 
 </NodeForm>
