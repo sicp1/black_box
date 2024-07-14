@@ -31,17 +31,17 @@ function NodeCharacterForm({key_,all_node,all_character,character_node}){
             children:""
         }
     ])
-    if (all_node[key_].Id in character_node){
+    if (all_node[key_].Id in character_node.current){
       all_character.forEach((item,index)=>{
-        if (character_node[all_node[key_].Id]['id']==item.id){
+        if (character_node.current[all_node[key_].Id]['id']==item.id){
           defaultValue.current=index
         }
       })
     }
     useEffect(()=>{
-if (all_node[key_].Id in character_node){
+if (all_node[key_].Id in character_node.current){
       all_character.forEach((item,index)=>{
-if (character_node[all_node[key_].Id]['id']==item.id){
+if (character_node.current[all_node[key_].Id]['id']==item.id){
 setItems([
   {
       key:"1",
@@ -105,7 +105,7 @@ console.log("return_default_value:",defaultValue.current)
           defaultValue={defaultValue.current}
           onChange={(value)=>{
             tmpValue.current=value
-            console.log(character_node)
+            console.log(character_node.current)
             setItems([
                 {
                     key:"1",
@@ -148,7 +148,7 @@ console.log("return_default_value:",defaultValue.current)
             marginTop:"10%"
         }}
         onClick={()=>{
-          character_node[all_node[key_].Id]={
+          character_node.current[all_node[key_].Id]={
             "name":all_character[tmpValue.current].name,
             "description":all_character[tmpValue.current].description,
             "feature":all_character[tmpValue.current].feature,

@@ -3,7 +3,7 @@ import React, { useState,useRef, useEffect } from 'react';
 // 引入组件
 import Chat, { Bubble, useMessages} from '@chatui/core';
 import axios from "axios"
-import {get_history,node_infer} from "../api"
+import {get_history,node_infer,node_get_all} from "../api"
 import {SSE} from "../sse"
 import {SettingOutlined} from  '@ant-design/icons'
 // 引入样式
@@ -26,6 +26,26 @@ NowMenuKey,
 setNowMenuKey}){
 const messages_all=useRef({})
 const [all_node,setAllNode]=useState([])
+const all_node_tmp=useRef([])
+const [defaultQuickReplies,setReplies] = useState([
+  {
+    name: '节点设置',
+  },
+  {
+    name: '人设设置',
+  },
+  {
+    name: '关于我们',
+  },
+  {
+    name: '多盒协作',
+  },
+  {
+    name:"节点人设配置"
+  }
+  
+]);
+
 const [all_character,setAllCharacter]=useState([])
 const { messages, appendMsg, setTyping,updateMsg,deleteMsg } = useMessages([]);
 
@@ -42,7 +62,7 @@ const [character_open,character_setopen]=useState(false)
 const [node_character_open,node_character_setopen]=useState(false)
 
 const character_node=useRef({})
-
+const all_node_choose=useRef([])
 console.log(node_open)
 const text_id=useRef(0)
 const text_start_end=useRef(0)
@@ -50,6 +70,19 @@ const processing=useRef(0)
 useEffect(()=>{
   console.log(1111)
   async function init(){
+    await node_get_all().then((res)=>{
+      all_node_tmp.current=res.data.data
+      setReplies([...defaultQuickReplies,
+      ...all_node_tmp.current.map((item)=>{
+        return {
+          "name":item.Name
+        }
+
+      })
+      ])
+      
+    })
+
 
 
 
@@ -151,24 +184,8 @@ if (isNaN(key_sessionid[nowMenuKey.current])==true){
   }
 ,[NowMenuKey])
 
-const defaultQuickReplies = [
-  {
-    name: '节点设置',
-  },
-  {
-    name: '人设设置',
-  },
-  {
-    name: '关于我们',
-  },
-  {
-    name: '多盒协作',
-  },
-  {
-    name:"节点人设配置"
-  }
-  
-];
+console.log("replies:   ",all_node)
+
 
 
 
@@ -354,9 +371,11 @@ var source=new SSE(`${baseURL}/v1/chat_ping`,
         text_start_end.current=0
         setChatting("0")
 
-        if (all_node.length!=0){
-          all_node.forEach((item)=>{
+        if (all_node_choose.current.length!=0){
+          all_node_choose.current.forEach((item)=>{
             if(!(item.Name in sessionid_array.current)){  
+              let character_id=character_node.current[item.Id]
+              console.log("character_id:",character_id,"item.Id:",item.Id,"character_node:",character_node.current)
             node_infer(JSON.stringify(
               {
                 "session":[
@@ -366,6 +385,7 @@ var source=new SSE(`${baseURL}/v1/chat_ping`,
                   }
                 ],
                 "node_id":item.Id,
+                "character_id":character_id.id,
                 "stream":false
               }
             )).then((res)=>{
@@ -387,6 +407,8 @@ var source=new SSE(`${baseURL}/v1/chat_ping`,
               })
             })
           }else{
+            let character_id=character_node.current[item.Id]
+            console.log("character_id:",character_id)
             node_infer(JSON.stringify({
             "session":[
              {
@@ -395,6 +417,7 @@ var source=new SSE(`${baseURL}/v1/chat_ping`,
              }
             ],
             "node_id":item.Id,
+            "character_id":character_id.id,
             "stream":false,
             "id":sessionid_array.current[item.Name]
              }
@@ -498,6 +521,33 @@ function renderMessageContent(msg) {
 
 function quickReply(msg){
   let name=msg.name
+  let nameArray=all_node_tmp.current.map(
+    (item)=>{
+      return item.Name
+    }
+  )
+  console.log(nameArray)
+  if (nameArray.indexOf(name)!=-1 ){
+    console.log("in")
+
+    if (all_node_choose.current.map(
+      (item)=>{
+        return item.Name
+      }
+    ).indexOf(name)!=-1){
+alert("删除成功")
+    }else{
+    all_node_tmp.current.forEach(
+      (item)=>{
+        if (item.Name==name){
+          all_node_choose.current.push(item)
+        }
+      }
+    )
+    alert("添加成功")
+    }
+  }
+
   if (name == "节点设置"){
    node_setopen(true)
   }
