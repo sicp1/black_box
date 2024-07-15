@@ -68,23 +68,24 @@ const text_id=useRef(0)
 const text_start_end=useRef(0)
 const processing=useRef(0)
 useEffect(()=>{
+  node_get_all().then((res)=>{
+    all_node_tmp.current=res.data.data
+    setReplies([...defaultQuickReplies,
+    ...all_node_tmp.current.map((item)=>{
+      return {
+        "name":item.Name
+      }
+
+    })
+    ])
+
+  })
+},[all_node_tmp])
+
+
+useEffect(()=>{
   console.log(1111)
   async function init(){
-    await node_get_all().then((res)=>{
-      all_node_tmp.current=res.data.data
-      setReplies([...defaultQuickReplies,
-      ...all_node_tmp.current.map((item)=>{
-        return {
-          "name":item.Name
-        }
-
-      })
-      ])
-      
-    })
-
-
-
 
 
     console.log("set:",menukey_history.current)
@@ -375,8 +376,43 @@ var source=new SSE(`${baseURL}/v1/chat_ping`,
           all_node_choose.current.forEach((item)=>{
             if(!(item.Name in sessionid_array.current)){  
               let character_id=character_node.current[item.Id]
+
               console.log("character_id:",character_id,"item.Id:",item.Id,"character_node:",character_node.current)
-            node_infer(JSON.stringify(
+              if(character_id===undefined){
+                node_infer(JSON.stringify(
+                  {
+                    "session":[
+                      {
+                        "role":"user",
+                        "content":val
+                      }
+                    ],
+                    "node_id":item.Id,
+                    "stream":false
+                  }
+                )).then((res)=>{
+
+                  console.log(res)
+                  sessionid_array.current[item.Name]= res.data.data.id
+                  text_id.current++
+                  appendMsg(
+                    {
+                      user:{
+                        "name":item.Name
+                      },
+                      type:"text",
+                      content:{"text":res.data.data.content},
+                      _id:text_id.current
+                    }
+                  )
+                  menukey_history.current[nowMenuKey.current].push({"content":res.data.data.content,
+                    "role":"assistant"
+                  })
+
+                })
+
+              }
+            else{node_infer(JSON.stringify(
               {
                 "session":[
                   {
@@ -406,9 +442,46 @@ var source=new SSE(`${baseURL}/v1/chat_ping`,
                 "role":"assistant"
               })
             })
+
+
+
+          }
           }else{
             let character_id=character_node.current[item.Id]
             console.log("character_id:",character_id)
+            
+            if(character_id===undefined){
+              node_infer(JSON.stringify({
+                "session":[
+                 {
+                   "role":"user",
+                   "content":val
+                 }
+                ],
+                "node_id":item.Id,
+                "stream":false,
+                "id":sessionid_array.current[item.Name]
+              })).then((res)=>{
+                text_id.current++
+                appendMsg(
+                  {
+                    user:{
+                      "name":item.Name
+                    },
+                    type:"text",
+                    content:{"text":res.data.data.content},
+                    _id:text_id.current
+                  }
+                )
+                menukey_history.current[nowMenuKey.current].push({"content":res.data.data.content,
+                  "role":"assistant"
+                })
+
+
+              })
+
+            }else{
+
             node_infer(JSON.stringify({
             "session":[
              {
@@ -438,6 +511,7 @@ var source=new SSE(`${baseURL}/v1/chat_ping`,
                })
 
              })
+            }
           }
 
 
@@ -536,6 +610,11 @@ function quickReply(msg){
       }
     ).indexOf(name)!=-1){
 alert("删除成功")
+all_node_choose.current=all_node_choose.current.filter(
+  (item)=>{
+    return item.Name!=name
+  }
+)
     }else{
     all_node_tmp.current.forEach(
       (item)=>{
