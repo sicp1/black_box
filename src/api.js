@@ -1,5 +1,5 @@
 import axios from "axios"
-export const baseURL="http://414308.proxy.nscc-gz.cn:8888"
+export const baseURL = "/api";
 axios.defaults.baseURL=baseURL
 
 export const chat=(data)=>{

@@ -749,7 +749,7 @@ all_node_choose.current=all_node_choose.current.filter(
 return (
   <>
   <Chat
-    navbar={{ title: '智能助理' }}
+    navbar={{ title: 'GS多盒协作Agent' }}
     messages={messages}
     renderMessageContent={renderMessageContent}
     onSend={handleSend}
