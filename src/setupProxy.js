@@ -1,17 +1,13 @@
-const { createProxyMiddleware } = require('http-proxy-middleware');
-console.log("123")
-module.exports = function(app) {
+const {createProxyMiddleware: proxy} = require('http-proxy-middleware');
+module.exports = function (app) {
     app.use(
-      '/api',
-      proxyMiddleware(options.filter || context, options),
-      createProxyMiddleware({
-        target: 'http://127.0.0.1:8080', //代理的地址
-        changeOrigin: true,
-        secure: false,
-     pathRewrite: {
-         "^/api": ""
-     }
-
+      proxy('/api', {
+        target: 'http://localhost:8080',
+        //secure: false,//是否验证htpps的安全证书，如果域名是https需要配置此项
+        changeOrigin: true,//必须设置为true
+        pathRewrite: {
+            "^/api": "",
+        },
       })
-    )
-  };
+    );
+}
