@@ -1,5 +1,5 @@
 import axios from "axios"
-export const baseURL = "/api";
+export const baseURL = "http://192.168.1.140:8080";
 axios.defaults.baseURL=baseURL
 
 export const chat=(data)=>{
